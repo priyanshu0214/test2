@@ -1,0 +1,47 @@
+from pyparsing import Suppress, Word, alphanums, originalTextFor, ParseException
+
+def utility(template):
+
+    # Define the assistant and user tags
+    assistant_start = "{{#assistant}}"
+    assistant_end = "{{/assistant}}"
+    user_start = "{{#user}}"
+    user_end = "{{/user}}"
+
+    # Define the grammar for matching {{gen ... }} commands
+    gen_expr = Suppress("{{gen") + Word(alphanums + "' ") + Suppress("}}")
+    gen_expr.setParseAction(lambda t: assistant_start + "{{gen" + t[0] + "}}" + assistant_end)
+    # Split the template into segments of user and assistant expressions
+    segments = []
+    current_segment = []
+    for token, start, end in gen_expr.scanString(template):
+        current_segment.append(template[:start])
+        current_segment.append(token[0])
+        template = template[end:]
+    current_segment.append(template)
+    segments.append(current_segment)
+
+    # Process the segments and generate the output
+    output = ""
+    # print(segments)
+    for segment in segments:
+        # print(segment)
+        if segment[0]:
+            output += user_start + segment[0] + user_end
+        # if segment != 0 and "".join(segment[1:]):
+        #     output += user_start + "".join(segment[1:]) + user_end
+        output += "".join(segment[1:])
+
+    if not output.endswith(assistant_end):
+        output += " " + assistant_start + "{{gen 'write'}}" + assistant_end
+
+    return output
+
+# Test the function with examples
+input_template1 = "how are things going, tell me about Delhi."
+output1 = utility(input_template1)
+print(output1)
+
+input_template2 = "Tweak this proverb to apply to model instructions instead. Where there is no guidance{{gen 'rewrite'}}"
+output2 = utility(input_template2)
+print(output2)
